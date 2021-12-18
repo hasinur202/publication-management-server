@@ -18,12 +18,13 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 async function run() {
     try {
         await client.connect();
-        const database = client.db('car_bazar');
-        const productsCollection = database.collection('products');
+        const database = client.db('publication_management');
+        const contentAreaCollection = database.collection('content_areas');
+        const contentsCollection = database.collection('contents');
         const usersCollection = database.collection('users');
+
+        const productsCollection = database.collection('products');
         const OrdersCollection = database.collection('orders');
-        
-        const bookingCollection = database.collection('bookings');
 
         app.post('/users', async (req, res) => {
             const user = req.body;
@@ -52,37 +53,205 @@ async function run() {
             res.json({ admin: isAdmin });
         })
 
-        // Add Product API
-        app.post('/addproduct', async (req, res) => {
-            const product = req.body;
-            product.rating = 0;
-            product.count = 0;
-            const result = await productsCollection.insertOne(product);
+        app.get('/editor-users/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            let isEditor = false;
+            if (user?.role === 'editor') {
+                isEditor = true;
+            }
+            res.json({ editor: isEditor });
+        })
+
+        // GET users API
+        app.get('/users', async (req, res) => {
+            const cursor = usersCollection.find({});
+            const contents = await cursor.toArray();
+            res.send(contents);
+        });
+
+        // GET dashboard
+        app.get('/dashboard', async (req, res) => {
+            const user = usersCollection.find({});
+            const contentArea = contentAreaCollection.find({});
+            const contents = contentsCollection.find({});
+            const orders = OrdersCollection.find({});
+
+            const users = await user.toArray();
+            const contentAreas = await contentArea.toArray();
+            const contentss = await contents.toArray();
+            const orderss = await orders.toArray();
+            
+            let newdata = {}
+            newdata.totalUser = users.length
+            newdata.contentArea = contentAreas.length
+            newdata.contentCount = contentss.length
+            newdata.orderCount = orderss.length
+
+            res.send(newdata);
+        });
+
+// ==============================================
+
+        // Add Content API
+        app.post('/add-content-area', async (req, res) => {
+            const content = req.body;
+            const result = await contentAreaCollection.insertOne(content);
             res.json(result);
         })
 
-        // GET API
-        app.get('/products', async (req, res) => {
-            const cursor = productsCollection.find({});
+        // GET content areas API
+        app.get('/content-areas', async (req, res) => {
+            const cursor = contentAreaCollection.find({});
+            const contents = await cursor.toArray();
+            res.send(contents);
+        });
+
+        // GET Single product
+        app.get('/content-area-details/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const product = await contentAreaCollection.findOne(query);
+            res.json(product);
+        })
+
+        // update status areas
+        app.put('/content-areas/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await contentAreaCollection.findOne(filter);
+            let status = '';
+            status = result.status === 1 ? 2 : 1;
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    status: status
+                },
+            };
+            const newResult = await contentAreaCollection.updateOne(filter, updateDoc, options)
+            res.json(newResult);
+        })
+
+        // add admin
+        app.put('/add-admin', async (req, res) => {
+            const user = req.body;
+
+            const requesterAccount = await usersCollection.findOne({ email: user.email });
+            if (requesterAccount) {
+                const filter = { email: user.email };
+                const updateDoc = { $set: { role: 'admin' } };
+                const result = await usersCollection.updateOne(filter, updateDoc);
+                res.json(result);
+            } else {
+                res.status(403).json({ message: 'User not exist..' })
+            }
+        })
+        // add editor
+        app.put('/add-editor', async (req, res) => {
+            const user = req.body;
+            const requesterAccount = await usersCollection.findOne({ email: user.email });
+            if (requesterAccount) {
+                const filter = { email: user.email };
+                const updateDoc = { $set: { role: 'editor' } };
+                const result = await usersCollection.updateOne(filter, updateDoc);
+                res.json(result);
+            } else {
+                res.status(403).json({ message: 'User not exist..' })
+            }
+        })
+
+        // GET contents
+        app.get('/contents', async (req, res) => {
+            const cursor = contentsCollection.find({});
             const products = await cursor.toArray();
             res.send(products);
         });
-
-        // DELETE Product
-        app.delete('/products/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: ObjectId(id) };
-            const result = await productsCollection.deleteOne(query);
+        // Add Contents API
+        app.post('/contents', async (req, res) => {
+            const product = req.body;
+            product.price = 0;
+            const result = await contentsCollection.insertOne(product);
             res.json(result);
         })
 
-        // GET Single product
-        app.get('/products/:id', async (req, res) => {
+        // GET contents by email
+        app.get('/contents/:email', async (req, res) => {
+            const uid = req.params.email;
+            const query = { email: uid };
+            const content = await contentsCollection.find(query);
+            const contents = await content.toArray();
+            res.json(contents);
+        })
+
+        // DELETE contents API
+        app.delete('/contents/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
-            const product = await productsCollection.findOne(query);
+            const result = await contentsCollection.deleteOne(query);
+            res.json(result);
+        })
+
+        // reject contents
+        app.put('/contents-reject/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            let status = 3;
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    status: status
+                },
+            };
+            const newResult = await contentsCollection.updateOne(filter, updateDoc, options)
+            res.json(newResult);
+        })
+        // recommended contents
+        app.put('/contents-recommend/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    status: 2
+                },
+            };
+            const newResult = await contentsCollection.updateOne(filter, updateDoc, options)
+            res.json(newResult);
+        })
+
+        // approve contents
+        app.put('/contents-approve/:id/:price', async (req, res) => {
+            const id = req.params.id;
+            const price = req.params.price;
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    status: 1,
+                    price: price
+                },
+            };
+            const newResult = await contentsCollection.updateOne(filter, updateDoc, options)
+            res.json(newResult);
+        })
+
+        // GET approved contents API
+        app.get('/get-approved-conents', async (req, res) => {
+            const query = { status: 1 };
+            const cursor = await contentsCollection.find(query);
+            const contents = await cursor.toArray();
+            res.json(contents);
+        });
+
+        // GET Single Contents
+        app.get('/contents-by-id/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const product = await contentsCollection.findOne(query);
             res.json(product);
         })
+// ========================================
 
         // Add Order API
         app.post('/orders', async (req, res) => {
@@ -143,20 +312,6 @@ async function run() {
             res.json(booktours);
         })
 
-        app.put('/add-admin', async (req, res) => {
-            const user = req.body;
-
-            const requesterAccount = await usersCollection.findOne({ email: user.email });
-            if (requesterAccount) {
-                const filter = { email: user.email };
-                const updateDoc = { $set: { role: 'admin' } };
-                const result = await usersCollection.updateOne(filter, updateDoc);
-                res.json(result);
-            } else {
-                res.status(403).json({ message: 'User not exist..' })
-            }
-        })
-
         //UPDATE API
         // app.put('/users/:id', async (req, res) => {
         //     const id = req.params.id;
@@ -184,9 +339,9 @@ async function run() {
 run().catch(console.dir);
 
 app.get('/', (req, res) => {
-    res.send('Running Bongo Car Bazar Server');
+    res.send('Publication Management Server');
 });
 
 app.listen(port, () => {
-    console.log('Running Bongo Car Bazar Server on Port', port);
+    console.log('Publication Management Server on Port', port);
 })
