@@ -1,5 +1,5 @@
-# BONGO CAR BAZAR
-Project Live link: [Click here](https://bongo-car-bazar.web.app/).
+# PUBLICATION MANAGEMENT
+Project Live link: [Click here](https://publication-management.web.app/).
 
 ## Technologies
 
@@ -8,22 +8,29 @@ This project developed by ReactJs.
 * React Bootstrap
 * Firebase Authentication
 * Firebase Hosting
-* React Font awesome and so more..
 * Heroku Cloud Server
+* Stripe Payment Gateway
+* React Font awesome and so more..
 
 ## Some Available Feature
-* Have home page for 'Bongo Car Bazar'
-* Have popular cars
-* All cars and cars details
-* Contact info
-* About info
-* Everyone can make order easily.
-* Anyone can easily find any car from Bongo Car Bazar.
-* User can see his/her orders list.
-* Can delete order before admins approval.
-* Admin can see all users order list.
-* Admin can make another admin.
-* and can ability to approve or reject order item.
+* Login-Registration System
+* Login with google
+* Admin Panel (Dahsboard)
+* Editor Panel (Dahsboard)
+* User Panel (Dahsboard)
+* Content Submission
+* Content Sorting/Approve/Reject
+* Set price for Content of Publication
+* Content Approve and Publish
+* Order Publication
+* Order Approve/Reject
+* Order Payment
+* Content Areas
+* Admin Dashboard Overview
+* User Management
+* Order Management
+* Contact Page
+* Not Found Page
 
 ## Some Instructions for new user
 * Have to login first in this site.
